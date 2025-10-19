@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+}
+
+/* Sandpack full height fix */
+.sp-wrapper,
+.sp-layout,
+.sp-stack {
+  height: 100% !important;
+}
+
+
+
+
+
