@@ -1,6 +1,8 @@
-import { Settings } from "lucide-react"
+import { Settings, Sun, Moon} from "lucide-react"
 import { SandpackProvider } from "@codesandbox/sandpack-react";
 import { EditorLayout } from "../components/EditorLayout";
+import {Dashboard} from "./Dashboard"
+
 
 export const Ide = () => {
     return (
@@ -11,15 +13,21 @@ export const Ide = () => {
                     <span className="w-10 h-10 bg-orange-500 rounded flex items-center justify-center text-lg">{'</>'}</span>
                     <h1 className="text-lg font-semibold">CipherStudio</h1>
                 </div>
-                <button className="p-2 hover:bg-zinc-800 rounded cursor-pointer">
-                    <Settings className="w-5 h-5" />
-                </button>
+                <div className="flex justify-center align-center gap-2 pr-1">
+                    <button className="p-2 hover:bg-zinc-800 rounded-xl cursor-pointer">
+                        <Sun className="w-5 h-5 text-orange-500" />
+                    </button>
+                    <button className="p-2 hover:bg-zinc-800 rounded-xl cursor-pointer">
+                        <Settings className="w-5 h-5" />
+                    </button>
+                </div>
             </header>
 
             <div className="w-full h-[92%]">
-                <SandpackProvider template="react" theme="dark" style={{ height: '100%' }}>
+                {/*<SandpackProvider template="react" theme="dark" style={{ height: '100%' }}>
                     <EditorLayout />
-                </SandpackProvider>
+                </SandpackProvider>*/}
+                <Dashboard/>
             </div>
         </div>
     )

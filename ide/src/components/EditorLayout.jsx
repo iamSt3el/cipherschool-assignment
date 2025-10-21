@@ -9,14 +9,18 @@ import {
     FileTabs
 } from "@codesandbox/sandpack-react";
 import { FileTree } from "./FileTree"
+import {ModalDialog} from "./ModalDialog"
 
 export const EditorLayout = () => {
     const [isPanelOpen, setIsPanelOpen] = useState(true);
+    const [isModalDialogOpen, setIsModalDialogOpen] = useState(false);
     const { dispatch} = useSandpack();
 
 
     return (
         <div className="w-full h-full flex">
+        {isModalDialogOpen && <ModalDialog 
+            setIsModalDialogOpen={setIsModalDialogOpen}/>}
             {/* File Explorer */}
         {isPanelOpen && <div className="flex-col h-full w-[15%]">
             <div className="w-full h-[5%] flex items-center justify-between bg-zinc-900 border-b border-zinc-800 pl-4 pr-1">
@@ -28,7 +32,9 @@ export const EditorLayout = () => {
                         >
                             <PanelLeftClose className="w-4 h-4" />
                         </button>   
-                        <button className="p-1 hover:bg-zinc-800 rounded cursor-pointer">
+                        <button className="p-1 hover:bg-zinc-800 rounded cursor-pointer"
+                            onClick = {() => setIsModalDialogOpen(true)}
+                        >
                             <Plus className="w-4 h-4" />
                         </button>
                     </div>
