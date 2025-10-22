@@ -32,7 +32,6 @@ const uploadToS3 = async (key, content, contentType = 'text/plain') => {
       key: result.Key
     };
   } catch (error) {
-    console.error('S3 Upload Error:', error);
     throw new Error('Failed to upload file to S3');
   }
 };
@@ -52,7 +51,6 @@ const getFromS3 = async (key) => {
     const result = await s3.getObject(params).promise();
     return result.Body.toString('utf-8');
   } catch (error) {
-    console.error('S3 Get Error:', error);
     throw new Error('Failed to get file from S3');
   }
 };
@@ -72,7 +70,6 @@ const deleteFromS3 = async (key) => {
     await s3.deleteObject(params).promise();
     return { success: true };
   } catch (error) {
-    console.error('S3 Delete Error:', error);
     throw new Error('Failed to delete file from S3');
   }
 };
@@ -103,7 +100,6 @@ const deleteManyFromS3 = async (keys) => {
       errors: result.Errors
     };
   } catch (error) {
-    console.error('S3 Bulk Delete Error:', error);
     throw new Error('Failed to delete files from S3');
   }
 };

@@ -1,5 +1,5 @@
-import { Plus, PanelLeftClose, Download, Copy, PanelLeft, Play, Save, Check } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { Plus, PanelLeftClose, Download, Copy, PanelLeft, Play, Save, Check, AlertCircle } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import {
     SandpackLayout,
@@ -23,71 +23,130 @@ export const EditorLayout = ({ selectedProject }) => {
     const { theme } = useTheme();
 
     const [saving, setSaving] = useState(false);
+    const [autoSaving, setAutoSaving] = useState(false);
     const [justSaved, setJustSaved] = useState(false);
+    const [saveError, setSaveError] = useState(null);
     const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
 
-    const autoSaveTimeoutRef = useRef(null);
-    const previousCodeRef = useRef(code);
-    const fileCacheRef = useRef(new Map()); 
+    const saveTimeoutRef = useRef(null);
+    const fileCacheRef = useRef(new Map());
+    const lastSavedContentRef = useRef({}); 
 
 
-    useEffect(() => {
-        const loadFileCache = async () => {
-            if (!selectedProject) return;
-
-            try {
-                const response = await fileAPI.getByProject(selectedProject._id);
-                if (response.success) {
-                    const cache = new Map();
-                    response.data.forEach(file => {
-                        const key = `${file.parentId || 'root'}_${file.name}`;
-                        cache.set(key, file);
-                    });
-                    fileCacheRef.current = cache;
-                    console.log(`Loaded ${cache.size} files into cache`);
-                }
-            } catch (error) {
-                console.error('Error loading file cache:', error);
-            }
-        };
-
-        loadFileCache();
-    }, [selectedProject]);
-
-  
-    const handleSave = async () => {
-        if (!selectedProject || !sandpack.activeFile || saving) return;
+    const loadFileCache = useCallback(async () => {
+        if (!selectedProject) return;
 
         try {
-            setSaving(true);
-            const filePath = sandpack.activeFile;
-            const content = sandpack.files[filePath].code;
+            const response = await fileAPI.getByProject(selectedProject._id);
+            if (response.success) {
+                const cache = new Map();
+                response.data.forEach(file => {
+                    const key = `${file.parentId || 'root'}_${file.name}`;
+                    cache.set(key, file);
 
-            await saveFileToDatabase(filePath, content);
+                    if (file.type === 'file') {
+                        const filePath = buildFilePath(file, response.data);
+                        lastSavedContentRef.current[filePath] = file.content || '';
+                    }
+                });
+                fileCacheRef.current = cache;
+            }
+        } catch (error) {
+            console.error('Failed to load file cache:', error);
+            fileCacheRef.current = new Map();
+        }
+    }, [selectedProject]);
 
+    const buildFilePath = (file, allFiles) => {
+        if (!file.parentId) {
+            return `/${file.name}`;
+        }
+
+        const parent = allFiles.find(f => f._id === file.parentId);
+        if (parent && parent.type === 'folder') {
+            const parentPath = buildFilePath(parent, allFiles);
+            return `${parentPath}/${file.name}`;
+        }
+
+        return `/${file.name}`;
+    };
+
+    useEffect(() => {
+        loadFileCache();
+    }, [selectedProject, loadFileCache]);
+
+    const handleSave = useCallback(async (filePath = null, showFeedback = true) => {
+        if (!selectedProject) return;
+        if (saving && showFeedback) return;
+
+        const targetFile = filePath || sandpack.activeFile;
+        if (!targetFile || !sandpack.files[targetFile]) return;
+
+        try {
+            if (showFeedback) setSaving(true);
+            setSaveError(null);
+
+            const content = sandpack.files[targetFile].code;
+
+            if (!showFeedback && lastSavedContentRef.current[targetFile] === content) {
+                return;
+            }
+
+            await saveFileToDatabase(targetFile, content);
+
+            lastSavedContentRef.current[targetFile] = content;
+
+            if (showFeedback) {
+                setJustSaved(true);
+                setTimeout(() => setJustSaved(false), 2000);
+            }
+        } catch (error) {
+            console.error('Save error:', error);
+            setSaveError(error.message || 'Failed to save');
+            setTimeout(() => setSaveError(null), 5000);
+        } finally {
+            if (showFeedback) setSaving(false);
+        }
+    }, [selectedProject, sandpack.activeFile, sandpack.files, saving]);
+
+    const saveAllFiles = useCallback(async () => {
+        if (!selectedProject || saving) return;
+
+        setSaving(true);
+        setSaveError(null);
+
+        try {
+            const savePromises = Object.keys(sandpack.files).map(async (filePath) => {
+                const content = sandpack.files[filePath].code;
+
+                if (lastSavedContentRef.current[filePath] !== content) {
+                    await saveFileToDatabase(filePath, content);
+                    lastSavedContentRef.current[filePath] = content;
+                }
+            });
+
+            await Promise.all(savePromises);
             setJustSaved(true);
             setTimeout(() => setJustSaved(false), 2000);
         } catch (error) {
-            console.error('save failed:', error);
+            console.error('Save all error:', error);
+            setSaveError(error.message || 'Failed to save all files');
+            setTimeout(() => setSaveError(null), 5000);
         } finally {
             setSaving(false);
         }
-    };
+    }, [selectedProject, sandpack.files, saving]);
 
  
     const saveFileToDatabase = async (filePath, content) => {
         const { folders, fileName } = parseFilePath(filePath);
 
         if (fileName.endsWith('.json')) {
-            if (!content.trim()) {
-                console.warn(`Skipping empty JSON file: ${filePath}`);
-                return;
-            }
+            if (!content.trim()) return;
             try {
                 JSON.parse(content);
             } catch (e) {
-                console.warn(`Skipping invalid JSON file: ${filePath}`, e.message);
-                return;
+                throw new Error('Invalid JSON syntax');
             }
         }
 
@@ -103,10 +162,13 @@ export const EditorLayout = ({ selectedProject }) => {
                     name: folderName,
                     type: 'folder'
                 });
-                if (response.success) {
-                    folder = response.data;
-                    fileCacheRef.current.set(cacheKey, folder);
+
+                if (!response.success) {
+                    throw new Error('Failed to create folder: ' + folderName);
                 }
+
+                folder = response.data;
+                fileCacheRef.current.set(cacheKey, folder);
             }
             currentParentId = folder._id;
         }
@@ -116,9 +178,15 @@ export const EditorLayout = ({ selectedProject }) => {
 
         if (existingFile && existingFile.type === 'file') {
             if (existingFile.content !== content) {
-                await fileAPI.update(existingFile._id, { content });
-                existingFile.content = content; // Update cache
-            } 
+                const response = await fileAPI.update(existingFile._id, { content });
+
+                if (!response.success) {
+                    throw new Error('Failed to update file');
+                }
+
+                existingFile.content = content;
+                fileCacheRef.current.set(cacheKey, existingFile);
+            }
         } else {
             const response = await fileAPI.create({
                 projectId: selectedProject._id,
@@ -129,38 +197,41 @@ export const EditorLayout = ({ selectedProject }) => {
                 language: getLanguageFromExtension(fileName)
             });
 
-            if (response.success) {
-                fileCacheRef.current.set(cacheKey, response.data);
-                console.log(`created: ${filePath}`);
+            if (!response.success) {
+                throw new Error('Failed to create file');
             }
+
+            fileCacheRef.current.set(cacheKey, response.data);
         }
     };
-
 
     useEffect(() => {
         if (!autoSaveEnabled || !sandpack.activeFile || !selectedProject) return;
 
-        const currentCode = sandpack.files[sandpack.activeFile]?.code;
-        if (previousCodeRef.current === currentCode) return;
+        const currentContent = sandpack.files[sandpack.activeFile]?.code;
+        const lastSavedContent = lastSavedContentRef.current[sandpack.activeFile];
 
-        previousCodeRef.current = currentCode;
+        if (currentContent === lastSavedContent) return;
 
-        if (autoSaveTimeoutRef.current) {
-            clearTimeout(autoSaveTimeoutRef.current);
+        if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current);
         }
 
-        // Set new timeout for auto-save (3 seconds after last change)
-        autoSaveTimeoutRef.current = setTimeout(() => {
-            handleSave();
-        }, 3000);
+        saveTimeoutRef.current = setTimeout(async () => {
+            setAutoSaving(true);
+            try {
+                await handleSave(sandpack.activeFile, false);
+            } finally {
+                setAutoSaving(false);
+            }
+        }, 2000);
 
         return () => {
-            if (autoSaveTimeoutRef.current) {
-                clearTimeout(autoSaveTimeoutRef.current);
+            if (saveTimeoutRef.current) {
+                clearTimeout(saveTimeoutRef.current);
             }
         };
-    }, [code, sandpack.activeFile, autoSaveEnabled, selectedProject]);
-
+    }, [sandpack.files, sandpack.activeFile, autoSaveEnabled, selectedProject, handleSave]);
 
     useEffect(() => {
         const handleKeyDown = (e) => {
@@ -172,13 +243,28 @@ export const EditorLayout = ({ selectedProject }) => {
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [sandpack.activeFile, selectedProject]);
+    }, [handleSave]);
+
+    const handleFileCreated = useCallback(async (filePath) => {
+        try {
+            await saveFileToDatabase(filePath, '');
+            lastSavedContentRef.current[filePath] = '';
+            await loadFileCache();
+        } catch (error) {
+            console.error('Failed to save new file:', error);
+            throw error;
+        }
+    }, [loadFileCache]);
 
     return (
         <div className="w-full h-full flex">
-            {isModalDialogOpen && <ModalDialog setIsModalDialogOpen={setIsModalDialogOpen} />}
+            {isModalDialogOpen && (
+                <ModalDialog
+                    setIsModalDialogOpen={setIsModalDialogOpen}
+                    onFileCreated={handleFileCreated}
+                />
+            )}
 
-            {/* File Explorer */}
             {isPanelOpen && (
                 <div className="flex-col h-full w-[15%]">
                     <div className={`w-full h-[5%] flex items-center justify-between pl-4 pr-1 ${
@@ -209,12 +295,17 @@ export const EditorLayout = ({ selectedProject }) => {
                     </div>
 
                     <div className={`h-[95%] ${theme === 'dark' ? 'bg-zinc-950' : 'bg-gray-50'}`}>
-                        <FileTree />
+                        <FileTree
+                            selectedProject={selectedProject}
+                            fileCache={fileCacheRef.current}
+                            onFileDeleted={() => {
+                                loadFileCache();
+                            }}
+                        />
                     </div>
                 </div>
             )}
 
-            {/* Editor and Preview */}
             <div className={`${isPanelOpen ? 'w-[85%]' : 'w-full'} h-full ${theme === 'dark' ? 'bg-black' : 'bg-white'}`}>
                 <SandpackLayout style={{ height: '100%', display: 'flex', flexDirection: 'row' }}>
                     <PanelGroup direction="horizontal" style={{ width: '100%', height: '100%' }}>
@@ -222,11 +313,10 @@ export const EditorLayout = ({ selectedProject }) => {
                             <div className="flex flex-col h-full">
                                 <FileTabs closableTabs={true} />
 
-                                {/* Toolbar */}
                                 <div className={`w-full h-[5%] flex items-center justify-between pr-4 pl-4 gap-2 ${
                                     theme === 'dark' ? 'bg-zinc-900 border-b border-zinc-800' : 'bg-gray-100 border-b border-gray-300'
                                 }`}>
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-2 flex-wrap">
                                         {!isPanelOpen && (
                                             <button
                                                 className={`p-1 rounded cursor-pointer ${
@@ -239,12 +329,13 @@ export const EditorLayout = ({ selectedProject }) => {
                                             </button>
                                         )}
 
-                                        {/* Save Button */}
                                         <button
-                                            onClick={handleSave}
+                                            onClick={() => handleSave()}
                                             disabled={saving}
                                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded cursor-pointer text-xs font-medium transition-all ${
-                                                justSaved
+                                                saveError
+                                                    ? 'bg-red-500/20 text-red-500 border border-red-500/30'
+                                                    : justSaved
                                                     ? 'bg-green-500/20 text-green-500 border border-green-500/30'
                                                     : saving
                                                     ? 'bg-orange-500/20 text-orange-500 border border-orange-500/30 cursor-wait'
@@ -252,9 +343,14 @@ export const EditorLayout = ({ selectedProject }) => {
                                                     ? 'bg-orange-500/10 hover:bg-orange-500/20 text-orange-500 border border-orange-500/30'
                                                     : 'bg-orange-50 hover:bg-orange-100 text-orange-600 border border-orange-200'
                                             }`}
-                                            title={justSaved ? "Saved!" : "Save (Ctrl+S)"}
+                                            title={saveError ? saveError : justSaved ? "Saved!" : "Save (Ctrl+S)"}
                                         >
-                                            {justSaved ? (
+                                            {saveError ? (
+                                                <>
+                                                    <AlertCircle className="w-3.5 h-3.5" />
+                                                    Error
+                                                </>
+                                            ) : justSaved ? (
                                                 <>
                                                     <Check className="w-3.5 h-3.5" />
                                                     Saved
@@ -272,7 +368,6 @@ export const EditorLayout = ({ selectedProject }) => {
                                             )}
                                         </button>
 
-                                        {/* Auto-save Toggle */}
                                         <label className="flex items-center gap-2 cursor-pointer">
                                             <input
                                                 type="checkbox"
@@ -283,9 +378,23 @@ export const EditorLayout = ({ selectedProject }) => {
                                             <span className={`text-xs font-medium ${
                                                 theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
                                             }`}>
-                                                Auto-save
+                                                Auto-save {autoSaveEnabled && '(2s)'}
                                             </span>
                                         </label>
+
+                                        {autoSaving && (
+                                            <span className="text-xs text-orange-500 flex items-center gap-1.5">
+                                                <div className="w-3 h-3 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+                                                Auto-saving...
+                                            </span>
+                                        )}
+
+                                        {saveError && (
+                                            <span className="text-xs text-red-500 flex items-center gap-1">
+                                                <AlertCircle className="w-3 h-3" />
+                                                {saveError}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
 

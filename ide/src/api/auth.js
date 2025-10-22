@@ -2,7 +2,6 @@ import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-// Create a separate axios instance for auth routes WITHOUT the 401 redirect interceptor
 const authAxios = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -10,7 +9,6 @@ const authAxios = axios.create({
   },
 });
 
-// Only add token to requests (no response interceptor that redirects)
 authAxios.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');

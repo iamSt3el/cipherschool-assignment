@@ -3,17 +3,34 @@ import { useState } from "react";
 import { useSandpack } from "@codesandbox/sandpack-react";
 import { useTheme } from "../context/ThemeContext";
 
-export const ModalDialog = ({setIsModalDialogOpen}) => {
+export const ModalDialog = ({setIsModalDialogOpen, onFileCreated}) => {
     const [fileName, setFileName] = useState("");
+    const [creating, setCreating] = useState(false);
     const { sandpack } = useSandpack();
     const { theme } = useTheme();
 
-    const handleCreate = () => {
-        if (fileName.trim()) {
-            const path = fileName.startsWith('/') ? fileName : '/' + fileName;
-            sandpack.addFile(path, '');
-            setIsModalDialogOpen(false);
-            setFileName("");
+    const handleCreate = async () => {
+        if (fileName.trim() && !creating) {
+            try {
+                setCreating(true);
+                const path = fileName.startsWith('/') ? fileName : '/' + fileName;
+
+                sandpack.addFile(path, '');
+
+                await new Promise(resolve => setTimeout(resolve, 100));
+
+                if (onFileCreated) {
+                    await onFileCreated(path);
+                }
+
+                setIsModalDialogOpen(false);
+                setFileName("");
+            } catch (error) {
+                console.error('Failed to create file:', error);
+                alert('Failed to create file: ' + error.message);
+            } finally {
+                setCreating(false);
+            }
         }
     };
     return (
@@ -74,8 +91,13 @@ export const ModalDialog = ({setIsModalDialogOpen}) => {
 
                     <button
                         onClick={handleCreate}
-                        className="px-4 py-2 text-sm bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg transition-all font-medium shadow-lg shadow-orange-500/25 cursor-pointer">
-                        Create
+                        disabled={creating}
+                        className={`px-4 py-2 text-sm rounded-lg transition-all font-medium shadow-lg shadow-orange-500/25 ${
+                            creating
+                                ? 'bg-orange-400 cursor-wait'
+                                : 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 cursor-pointer'
+                        } text-white`}>
+                        {creating ? 'Creating...' : 'Create'}
                     </button>
 
                 </div>

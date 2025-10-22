@@ -9,7 +9,6 @@ const axiosInstance = axios.create({
   },
 });
 
-// Add token to requests if it exists
 axiosInstance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -23,17 +22,13 @@ axiosInstance.interceptors.request.use(
   }
 );
 
-// Handle response errors
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Only redirect on 401 if user was already logged in (has token)
-    // Don't redirect on login/register failures
     const isAuthRoute = error.config?.url?.includes('/auth/login') ||
                         error.config?.url?.includes('/auth/register');
 
     if (error.response?.status === 401 && !isAuthRoute) {
-      // User's session expired or token is invalid
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/';

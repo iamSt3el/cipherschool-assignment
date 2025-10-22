@@ -10,7 +10,9 @@ import { convertDBFilesToSandpack } from "../utils/fileHelpers";
 
 export const Ide = () => {
     const { theme } = useTheme();
-    const [currentView, setCurrentView] = useState('dashboard');
+    const [currentView, setCurrentView] = useState(() => {
+        return sessionStorage.getItem('ide_currentView') || 'dashboard';
+    });
     const [selectedProject, setSelectedProject] = useState(null);
     const [projectFiles, setProjectFiles] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -19,6 +21,10 @@ export const Ide = () => {
         setSelectedProject(project);
         setCurrentView('editor');
         setIsLoading(true);
+
+        sessionStorage.setItem('ide_currentView', 'editor');
+        sessionStorage.setItem('ide_selectedProjectId', project._id);
+        sessionStorage.setItem('ide_selectedProject', JSON.stringify(project));
 
         try {
             const response = await fileAPI.getByProject(project._id);
@@ -31,6 +37,7 @@ export const Ide = () => {
                 setProjectFiles(null);
             }
         } catch (err) {
+            console.error('Failed to load project files:', err);
             setProjectFiles(null);
         } finally {
             setIsLoading(false);
@@ -41,7 +48,29 @@ export const Ide = () => {
         setCurrentView('dashboard');
         setSelectedProject(null);
         setProjectFiles(null);
+
+        sessionStorage.removeItem('ide_currentView');
+        sessionStorage.removeItem('ide_selectedProjectId');
+        sessionStorage.removeItem('ide_selectedProject');
     };
+
+    useEffect(() => {
+        const savedProjectId = sessionStorage.getItem('ide_selectedProjectId');
+        const savedProjectData = sessionStorage.getItem('ide_selectedProject');
+
+        if (savedProjectId && savedProjectData && currentView === 'editor') {
+            try {
+                const project = JSON.parse(savedProjectData);
+                handleProjectOpen(project);
+            } catch (err) {
+                console.error('Failed to restore project:', err);
+                sessionStorage.removeItem('ide_selectedProjectId');
+                sessionStorage.removeItem('ide_selectedProject');
+                sessionStorage.removeItem('ide_currentView');
+                setCurrentView('dashboard');
+            }
+        }
+    }, []);
 
     return (
         <ProjectProvider>

@@ -1,7 +1,3 @@
-/**
- * Predefined project templates
- */
-
 export const REACT_TEMPLATE = {
   '/App.js': {
     code: `export default function App() {
@@ -76,52 +72,6 @@ root.render(
 }
 `
   }
-};
-
-
-export const templateToFileObjects = (template, projectId) => {
-  const fileObjects = [];
-  const folderMap = new Map(); // Track created folders
-
-  for (const [filePath, fileData] of Object.entries(template)) {
-    const cleanPath = filePath.replace(/^\//, '');
-    const parts = cleanPath.split('/');
-    const fileName = parts[parts.length - 1];
-    const folders = parts.slice(0, -1);
-
-    // Create folder hierarchy
-    let currentParentId = null;
-    for (let i = 0; i < folders.length; i++) {
-      const folderName = folders[i];
-      const folderPath = folders.slice(0, i + 1).join('/');
-
-      if (!folderMap.has(folderPath)) {
-        const folderObj = {
-          projectId,
-          parentId: currentParentId,
-          name: folderName,
-          type: 'folder'
-        };
-        fileObjects.push(folderObj);
-        folderMap.set(folderPath, fileObjects.length - 1); // Store index
-        currentParentId = folderPath; // Use path as temporary ID
-      } else {
-        currentParentId = folderPath;
-      }
-    }
-
-    // Create file object
-    fileObjects.push({
-      projectId,
-      parentId: currentParentId,
-      name: fileName,
-      type: 'file',
-      content: fileData.code,
-      language: getLanguageFromExtension(fileName)
-    });
-  }
-
-  return fileObjects;
 };
 
 const getLanguageFromExtension = (filename) => {

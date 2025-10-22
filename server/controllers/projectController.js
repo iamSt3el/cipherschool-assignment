@@ -36,7 +36,6 @@ const createProject = async (req, res) => {
       data: project
     });
   } catch (error) {
-    console.error('Create Project Error:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Server error'
@@ -73,7 +72,6 @@ const getUserProjects = async (req, res) => {
       data: projectsWithStats
     });
   } catch (error) {
-    console.error('Get Projects Error:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Server error'
@@ -114,7 +112,6 @@ const getProjectById = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get Project Error:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Server error'
@@ -157,7 +154,6 @@ const updateProject = async (req, res) => {
       data: project
     });
   } catch (error) {
-    console.error('Update Project Error:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Server error'
@@ -199,7 +195,6 @@ const deleteProject = async (req, res) => {
       try {
         await deleteManyFromS3(s3Keys);
       } catch (s3Error) {
-        console.error('S3 Delete Error:', s3Error);
         // Continue with deletion even if S3 fails
       }
     }
@@ -215,7 +210,6 @@ const deleteProject = async (req, res) => {
       message: 'Project deleted successfully'
     });
   } catch (error) {
-    console.error('Delete Project Error:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Server error'

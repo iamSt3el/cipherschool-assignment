@@ -1,10 +1,3 @@
-/**
- * Helper functions for file management
- */
-
-/**
- * Build full file path from database file object with parent hierarchy
- */
 export const buildFilePath = (file, allFiles) => {
   if (!file.parentId) {
     return `/${file.name}`;
@@ -45,9 +38,6 @@ export const convertDBFilesToSandpack = (dbFiles) => {
   return sandpackFiles;
 };
 
-/**
- * Get file extension language mapping
- */
 export const getLanguageFromExtension = (filename) => {
   if (filename.endsWith('.js') || filename.endsWith('.jsx')) return 'javascript';
   if (filename.endsWith('.ts') || filename.endsWith('.tsx')) return 'typescript';
@@ -57,16 +47,13 @@ export const getLanguageFromExtension = (filename) => {
   return 'javascript';
 };
 
-/**
- * Parse file path into parts (folder structure + filename)
- */
 export const parseFilePath = (filePath) => {
   const cleanPath = filePath.replace(/^\//, '');
   const parts = cleanPath.split('/');
 
   return {
-    folders: parts.slice(0, -1), // All parts except last
-    fileName: parts[parts.length - 1], // Last part
+    folders: parts.slice(0, -1),
+    fileName: parts[parts.length - 1],
     fullPath: cleanPath
   };
 };

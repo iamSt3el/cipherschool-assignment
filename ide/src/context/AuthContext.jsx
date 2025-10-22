@@ -17,7 +17,6 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is logged in on mount
     const storedToken = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
 
@@ -39,7 +38,6 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('user', JSON.stringify(userData));
         return { success: true };
       } else {
-        // API returned but with success: false
         return {
           success: false,
           message: response.message || 'Login failed',
@@ -64,7 +62,6 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('user', JSON.stringify(userData));
         return { success: true };
       } else {
-        // API returned but with success: false
         return {
           success: false,
           message: response.message || 'Registration failed',

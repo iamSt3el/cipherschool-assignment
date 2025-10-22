@@ -49,7 +49,6 @@ const registerUser = async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('Register Error:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Server error'
@@ -102,7 +101,6 @@ const loginUser = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Login Error:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Server error'
@@ -134,7 +132,6 @@ const getUserProfile = async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('Get Profile Error:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Server error'

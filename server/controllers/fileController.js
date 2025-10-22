@@ -68,7 +68,6 @@ const createFile = async (req, res) => {
       try {
         await uploadToS3(s3Key, content, 'text/plain');
       } catch (s3Error) {
-        console.error('S3 Upload Error:', s3Error);
         // Continue without S3, store in MongoDB
         s3Key = null;
       }
@@ -92,7 +91,6 @@ const createFile = async (req, res) => {
       data: file
     });
   } catch (error) {
-    console.error('Create File Error:', error);
     res.status(error.message.includes('authorized') ? 403 : 500).json({
       success: false,
       message: error.message || 'Server error'
@@ -123,7 +121,6 @@ const getFileById = async (req, res) => {
         const s3Content = await getFromS3(file.s3Key);
         file.content = s3Content;
       } catch (s3Error) {
-        console.error('S3 Get Error:', s3Error);
         // Return file without content if S3 fails
       }
     }
@@ -133,7 +130,6 @@ const getFileById = async (req, res) => {
       data: file
     });
   } catch (error) {
-    console.error('Get File Error:', error);
     res.status(error.message.includes('authorized') ? 403 : 500).json({
       success: false,
       message: error.message || 'Server error'
@@ -175,7 +171,6 @@ const getFilesByProject = async (req, res) => {
             const s3Content = await getFromS3(fileObj.s3Key);
             fileObj.content = s3Content;
           } catch (s3Error) {
-            console.error('S3 Get Error for file:', fileObj.name, s3Error.message);
             // Keep empty content if S3 fails
           }
         }
@@ -190,7 +185,6 @@ const getFilesByProject = async (req, res) => {
       data: filesWithContent
     });
   } catch (error) {
-    console.error('Get Files Error:', error);
     res.status(error.message.includes('authorized') ? 403 : 500).json({
       success: false,
       message: error.message || 'Server error'
@@ -227,7 +221,6 @@ const updateFile = async (req, res) => {
         try {
           await uploadToS3(file.s3Key, content, 'text/plain');
         } catch (s3Error) {
-          console.error('S3 Update Error:', s3Error);
           // Fall back to MongoDB
           file.content = content;
           file.s3Key = null;
@@ -249,7 +242,6 @@ const updateFile = async (req, res) => {
       data: file
     });
   } catch (error) {
-    console.error('Update File Error:', error);
     res.status(error.message.includes('authorized') ? 403 : 500).json({
       success: false,
       message: error.message || 'Server error'
@@ -289,7 +281,6 @@ const deleteFile = async (req, res) => {
         try {
           await deleteManyFromS3(s3Keys);
         } catch (s3Error) {
-          console.error('S3 Delete Error:', s3Error);
           // Continue with deletion even if S3 fails
         }
       }
@@ -302,7 +293,6 @@ const deleteFile = async (req, res) => {
         try {
           await deleteFromS3(file.s3Key);
         } catch (s3Error) {
-          console.error('S3 Delete Error:', s3Error);
           // Continue with deletion even if S3 fails
         }
       }
@@ -318,7 +308,6 @@ const deleteFile = async (req, res) => {
       message: 'File/folder deleted successfully'
     });
   } catch (error) {
-    console.error('Delete File Error:', error);
     res.status(error.message.includes('authorized') ? 403 : 500).json({
       success: false,
       message: error.message || 'Server error'
