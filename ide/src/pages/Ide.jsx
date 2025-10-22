@@ -1,34 +1,84 @@
-import { Settings, Sun, Moon} from "lucide-react"
+import { useState, useEffect } from "react";
 import { SandpackProvider } from "@codesandbox/sandpack-react";
 import { EditorLayout } from "../components/EditorLayout";
-import {Dashboard} from "./Dashboard"
-
+import { Dashboard } from "./Dashboard";
+import { IdeHeader } from "../components/IdeHeader";
+import { useTheme } from "../context/ThemeContext";
+import { ProjectProvider } from "../context/ProjectContext";
+import { fileAPI } from "../api/files";
+import { convertDBFilesToSandpack } from "../utils/fileHelpers";
 
 export const Ide = () => {
-    return (
-        <div className="w-full h-full flex-col bg-white text-white">
-            {/* Header */}
-            <header className="w-full h-[8%] flex flex-row pr-4 pl-4 justify-between items-center bg-zinc-900 border-b border-zinc-800">
-                <div className="flex flex-row items-center gap-3 font-bold">
-                    <span className="w-10 h-10 bg-orange-500 rounded flex items-center justify-center text-lg">{'</>'}</span>
-                    <h1 className="text-lg font-semibold">CipherStudio</h1>
-                </div>
-                <div className="flex justify-center align-center gap-2 pr-1">
-                    <button className="p-2 hover:bg-zinc-800 rounded-xl cursor-pointer">
-                        <Sun className="w-5 h-5 text-orange-500" />
-                    </button>
-                    <button className="p-2 hover:bg-zinc-800 rounded-xl cursor-pointer">
-                        <Settings className="w-5 h-5" />
-                    </button>
-                </div>
-            </header>
+    const { theme } = useTheme();
+    const [currentView, setCurrentView] = useState('dashboard');
+    const [selectedProject, setSelectedProject] = useState(null);
+    const [projectFiles, setProjectFiles] = useState(null);
+    const [isLoading, setIsLoading] = useState(false);
 
-            <div className="w-full h-[92%]">
-                {/*<SandpackProvider template="react" theme="dark" style={{ height: '100%' }}>
-                    <EditorLayout />
-                </SandpackProvider>*/}
-                <Dashboard/>
+    const handleProjectOpen = async (project) => {
+        setSelectedProject(project);
+        setCurrentView('editor');
+        setIsLoading(true);
+
+        try {
+            const response = await fileAPI.getByProject(project._id);
+            const dbFiles = response.success ? response.data : [];
+
+            if (dbFiles.length > 0) {
+                const sandpackFiles = convertDBFilesToSandpack(dbFiles);
+                setProjectFiles(sandpackFiles);
+            } else {
+                setProjectFiles(null);
+            }
+        } catch (err) {
+            setProjectFiles(null);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleBackToDashboard = () => {
+        setCurrentView('dashboard');
+        setSelectedProject(null);
+        setProjectFiles(null);
+    };
+
+    return (
+        <ProjectProvider>
+            <div className={`w-full h-full flex-col ${theme === 'dark' ? 'bg-white' : 'bg-gray-50'} text-white`}>
+                <IdeHeader
+                    currentView={currentView}
+                    onBackToDashboard={handleBackToDashboard}
+                    selectedProject={selectedProject}
+                />
+
+                <div className="w-full h-[92%]">
+                    {currentView === 'dashboard' ? (
+                        <Dashboard onProjectOpen={handleProjectOpen} />
+                    ) : selectedProject && !isLoading ? (
+                        <SandpackProvider
+                            key={selectedProject._id}
+                            template="react"
+                            theme={theme === 'dark' ? 'dark' : 'light'}
+                            style={{ height: '100%' }}
+                            files={projectFiles}
+                            options={{
+                                autorun: true,
+                                recompileMode: 'immediate',
+                                recompileDelay: 300
+                            }}
+                        >
+                            <EditorLayout selectedProject={selectedProject} />
+                        </SandpackProvider>
+                    ) : (
+                        <div className={`w-full h-full flex items-center justify-center ${
+                            theme === 'dark' ? 'bg-black text-white' : 'bg-white text-gray-900'
+                        }`}>
+                            <p>Loading project...</p>
+                        </div>
+                    )}
+                </div>
             </div>
-        </div>
-    )
-}
+        </ProjectProvider>
+    );
+};

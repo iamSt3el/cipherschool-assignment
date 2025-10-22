@@ -1,0 +1,45 @@
+import axios from 'axios';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+const axiosInstance = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Add token to requests if it exists
+axiosInstance.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Handle response errors
+axiosInstance.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Only redirect on 401 if user was already logged in (has token)
+    // Don't redirect on login/register failures
+    const isAuthRoute = error.config?.url?.includes('/auth/login') ||
+                        error.config?.url?.includes('/auth/register');
+
+    if (error.response?.status === 401 && !isAuthRoute) {
+      // User's session expired or token is invalid
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/';
+    }
+    return Promise.reject(error);
+  }
+);
+
+export default axiosInstance;

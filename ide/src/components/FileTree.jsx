@@ -1,8 +1,8 @@
 import React, { useState } from 'react'
 import { useSandpack } from "@codesandbox/sandpack-react";
 import { ChevronRight, ChevronDown, File, Folder, FolderOpen } from "lucide-react";
+import { useTheme } from "../context/ThemeContext";
 
-// Helper function to build tree structure from file paths
 const buildFileTree = (files) => {
     const tree = {};
 
@@ -27,7 +27,7 @@ const buildFileTree = (files) => {
 };
 
 // Component to render a single file or folder
-const TreeNode = ({ node, activeFile, onFileClick, level = 0 }) => {
+const TreeNode = ({ node, activeFile, onFileClick, level = 0, theme }) => {
     const [isOpen, setIsOpen] = useState(true);
     const hasChildren = Object.keys(node.children).length > 0;
     const isActive = node.path === activeFile;
@@ -44,23 +44,29 @@ const TreeNode = ({ node, activeFile, onFileClick, level = 0 }) => {
         <div>
             <div
                 onClick={handleClick}
-                className={`flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-zinc-800 transition ${
-                    isActive ? 'bg-zinc-800 border-l-2 border-orange-500' : ''
+                className={`flex items-center gap-2 px-3 py-1.5 cursor-pointer transition ${
+                    theme === 'dark' ? 'hover:bg-zinc-800' : 'hover:bg-gray-200'
+                } ${
+                    isActive ? `${theme === 'dark' ? 'bg-zinc-800' : 'bg-gray-200'} border-l-2 border-orange-500` : ''
                 }`}
                 style={{ paddingLeft: `${level * 12 + 12}px` }}
             >
                 {node.isFile ? (
                     <>
                         <div className="w-4" />
-                        <File className="w-4 h-4 text-gray-400" />
+                        <File className={`w-4 h-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`} />
                     </>
                 ) : (
                     <>
-                        {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                        {isOpen ? (
+                            <ChevronDown className={`w-4 h-4 ${theme === 'dark' ? 'text-white' : 'text-gray-700'}`} />
+                        ) : (
+                            <ChevronRight className={`w-4 h-4 ${theme === 'dark' ? 'text-white' : 'text-gray-700'}`} />
+                        )}
                         {isOpen ? <FolderOpen className="w-4 h-4 text-orange-500" /> : <Folder className="w-4 h-4 text-orange-500" />}
                     </>
                 )}
-                <span className="text-sm">{node.name}</span>
+                <span className={`text-sm ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{node.name}</span>
             </div>
 
             {!node.isFile && isOpen && hasChildren && (
@@ -80,6 +86,7 @@ const TreeNode = ({ node, activeFile, onFileClick, level = 0 }) => {
                                 activeFile={activeFile}
                                 onFileClick={onFileClick}
                                 level={level + 1}
+                                theme={theme}
                             />
                         ))}
                 </div>
@@ -91,6 +98,7 @@ const TreeNode = ({ node, activeFile, onFileClick, level = 0 }) => {
 export const FileTree = () => {
     const { sandpack } = useSandpack();
     const { files, activeFile, openFile } = sandpack;
+    const { theme } = useTheme();
 
     const fileTree = buildFileTree(files);
 
@@ -99,7 +107,7 @@ export const FileTree = () => {
     };
 
     return (
-        <div className="text-white">
+        <div>
             {Object.values(fileTree)
                 .sort((a, b) => {
                     // Sort folders first, then files
@@ -114,6 +122,7 @@ export const FileTree = () => {
                         node={node}
                         activeFile={activeFile}
                         onFileClick={handleFileClick}
+                        theme={theme}
                     />
                 ))}
         </div>
