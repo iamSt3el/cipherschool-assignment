@@ -22,19 +22,15 @@ export const EditorLayout = ({ selectedProject }) => {
     const { code, updateCode } = useActiveCode();
     const { theme } = useTheme();
 
-    // Save states
     const [saving, setSaving] = useState(false);
     const [justSaved, setJustSaved] = useState(false);
     const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
 
-    // Refs
     const autoSaveTimeoutRef = useRef(null);
     const previousCodeRef = useRef(code);
-    const fileCacheRef = useRef(new Map()); // Cache file IDs from DB
+    const fileCacheRef = useRef(new Map()); 
 
-    /**
-     * Load file cache from database
-     */
+
     useEffect(() => {
         const loadFileCache = async () => {
             if (!selectedProject) return;
@@ -48,7 +44,7 @@ export const EditorLayout = ({ selectedProject }) => {
                         cache.set(key, file);
                     });
                     fileCacheRef.current = cache;
-                    console.log(`📦 Loaded ${cache.size} files into cache`);
+                    console.log(`Loaded ${cache.size} files into cache`);
                 }
             } catch (error) {
                 console.error('Error loading file cache:', error);
@@ -58,9 +54,7 @@ export const EditorLayout = ({ selectedProject }) => {
         loadFileCache();
     }, [selectedProject]);
 
-    /**
-     * Save current active file only
-     */
+  
     const handleSave = async () => {
         if (!selectedProject || !sandpack.activeFile || saving) return;
 
@@ -74,40 +68,35 @@ export const EditorLayout = ({ selectedProject }) => {
             setJustSaved(true);
             setTimeout(() => setJustSaved(false), 2000);
         } catch (error) {
-            console.error('❌ Save failed:', error);
+            console.error('save failed:', error);
         } finally {
             setSaving(false);
         }
     };
 
-    /**
-     * Save a single file to database
-     */
+ 
     const saveFileToDatabase = async (filePath, content) => {
         const { folders, fileName } = parseFilePath(filePath);
 
-        // Validate JSON files
         if (fileName.endsWith('.json')) {
             if (!content.trim()) {
-                console.warn(`⚠️  Skipping empty JSON file: ${filePath}`);
+                console.warn(`Skipping empty JSON file: ${filePath}`);
                 return;
             }
             try {
                 JSON.parse(content);
             } catch (e) {
-                console.warn(`⚠️  Skipping invalid JSON file: ${filePath}`, e.message);
+                console.warn(`Skipping invalid JSON file: ${filePath}`, e.message);
                 return;
             }
         }
 
-        // Create folder hierarchy if needed
         let currentParentId = null;
         for (const folderName of folders) {
             const cacheKey = `${currentParentId || 'root'}_${folderName}`;
             let folder = fileCacheRef.current.get(cacheKey);
 
             if (!folder) {
-                // Create folder
                 const response = await fileAPI.create({
                     projectId: selectedProject._id,
                     parentId: currentParentId,
@@ -117,27 +106,20 @@ export const EditorLayout = ({ selectedProject }) => {
                 if (response.success) {
                     folder = response.data;
                     fileCacheRef.current.set(cacheKey, folder);
-                    console.log(`✅ Created folder: ${folderName}`);
                 }
             }
             currentParentId = folder._id;
         }
 
-        // Find or create file
         const cacheKey = `${currentParentId || 'root'}_${fileName}`;
         const existingFile = fileCacheRef.current.get(cacheKey);
 
         if (existingFile && existingFile.type === 'file') {
-            // Update existing file
             if (existingFile.content !== content) {
                 await fileAPI.update(existingFile._id, { content });
                 existingFile.content = content; // Update cache
-                console.log(`✏️  Updated: ${filePath}`);
-            } else {
-                console.log(`⏭️  Skipped (no changes): ${filePath}`);
-            }
+            } 
         } else {
-            // Create new file
             const response = await fileAPI.create({
                 projectId: selectedProject._id,
                 parentId: currentParentId,
@@ -149,14 +131,12 @@ export const EditorLayout = ({ selectedProject }) => {
 
             if (response.success) {
                 fileCacheRef.current.set(cacheKey, response.data);
-                console.log(`✨ Created: ${filePath}`);
+                console.log(`created: ${filePath}`);
             }
         }
     };
 
-    /**
-     * Auto-save effect - tracks active file changes only
-     */
+
     useEffect(() => {
         if (!autoSaveEnabled || !sandpack.activeFile || !selectedProject) return;
 
@@ -165,14 +145,12 @@ export const EditorLayout = ({ selectedProject }) => {
 
         previousCodeRef.current = currentCode;
 
-        // Clear existing timeout
         if (autoSaveTimeoutRef.current) {
             clearTimeout(autoSaveTimeoutRef.current);
         }
 
         // Set new timeout for auto-save (3 seconds after last change)
         autoSaveTimeoutRef.current = setTimeout(() => {
-            console.log(`⏰ Auto-save triggered for: ${sandpack.activeFile}`);
             handleSave();
         }, 3000);
 
@@ -183,9 +161,7 @@ export const EditorLayout = ({ selectedProject }) => {
         };
     }, [code, sandpack.activeFile, autoSaveEnabled, selectedProject]);
 
-    /**
-     * Keyboard shortcut for save (Ctrl+S / Cmd+S)
-     */
+
     useEffect(() => {
         const handleKeyDown = (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key === 's') {
@@ -330,7 +306,7 @@ export const EditorLayout = ({ selectedProject }) => {
                         }`} />
 
                         <Panel defaultSize={50} minSize={20}>
-                            <SandpackPreview style={{ height: '100%' }} />
+                            <SandpackPreview showNavigator={true} style={{ height: '100%' }} />
                         </Panel>
                     </PanelGroup>
                 </SandpackLayout>
