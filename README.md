@@ -2,6 +2,16 @@
 
 A full-stack web-based IDE application with React frontend and Node.js backend.
 
+# Screenshots
+
+## Dashboard
+![Dashboard](./screenshots/dashboard-black.png)
+![Dashboard](./screenshots/dashboard-white.png)
+
+## Editor
+![Editor](./screenshots/ide-black.png)
+![Editor](./screenshots/ide-white.png)
+
 ## Project Structure
 
 ```
