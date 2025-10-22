@@ -173,10 +173,10 @@ export const Dashboard = ({ onProjectOpen }) => {
 
     return (
         <div className={`w-full h-full overflow-y-auto ${theme === 'dark' ? 'bg-black' : 'bg-white'}`}>
-        <main className="max-w-7xl mx-auto px-8 py-10 min-h-full">
-            <div className="flex items-center justify-between mb-8">
+        <main className="max-w-7xl mx-auto px-4 md:px-8 py-6 md:py-10 min-h-full">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 md:mb-8 gap-4">
                 <div>
-                    <h2 className={`text-3xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                    <h2 className={`text-2xl md:text-3xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
                     My Projects
                     </h2>
                 <p className={`text-sm flex items-center gap-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -187,9 +187,9 @@ export const Dashboard = ({ onProjectOpen }) => {
 
             <button
                 onClick={() => setShowNewProjectModal(true)}
-                className="flex items-center gap-2.5 px-6 py-3 bg-orange-500 hover:bg-orange-600 rounded-xl transition-all font-semibold shadow-xl shadow-orange-500/30 hover:shadow-orange-500/40 hover:scale-105 cursor-pointer"
+                className="flex items-center gap-2.5 px-4 md:px-6 py-2.5 md:py-3 bg-orange-500 hover:bg-orange-600 rounded-xl transition-all font-semibold shadow-xl shadow-orange-500/30 hover:shadow-orange-500/40 hover:scale-105 cursor-pointer text-sm md:text-base"
             >
-                <Sparkles className="w-5 h-5"/>
+                <Sparkles className="w-4 h-4 md:w-5 md:h-5"/>
                 Create Project
             </button>
             </div>
@@ -213,7 +213,7 @@ export const Dashboard = ({ onProjectOpen }) => {
                     'bg-white border-gray-200 shadow-sm'
             }`}>
 
-                <div className={`grid grid-cols-12 gap-4 px-6 py-4 border-b text-xs font-semibold uppercase tracking-wider ${
+                <div className={`hidden lg:grid grid-cols-12 gap-4 px-6 py-4 border-b text-xs font-semibold uppercase tracking-wider ${
                     theme === 'dark' ? 'bg-zinc-900/50 border-zinc-800/50 text-gray-400':'bg-gray-50 border-gray-200 text-gray-600'
                 }`}>
                     <div className="col-span-4 flex items-center gap-2">
@@ -246,59 +246,74 @@ export const Dashboard = ({ onProjectOpen }) => {
                     <div
                         key={project._id}
                         onClick={() => onProjectOpen(project)}
-                        className={`grid grid-cols-12 gap-4 px-6 py-5 transition-colors cursor-pointer group ${theme === 'dark' ? 'hover:bg-zinc-800/30' : 'hover:bg-gray-50'}`}>
-                    <div className="col-span-4 flex items-center gap-3">
+                        className={`lg:grid lg:grid-cols-12 gap-4 px-4 md:px-6 py-4 md:py-5 transition-colors cursor-pointer group ${theme === 'dark' ? 'hover:bg-zinc-800/30' : 'hover:bg-gray-50'}`}>
+
+                    <div className="lg:col-span-4 flex items-center gap-3 mb-3 lg:mb-0">
                         <div className={`p-2.5 border rounded-lg transition-colors ${
                             theme === 'dark' ? 'bg-orange-500/10 border-orange-500/20 group-hover:bg-orange-500/20':'bg-orange-50 border-orange-200 group-hover:bg-orange-100'
                         }`}>
                             <Folder className="w-5 h-5 text-orange-500"/>
                         </div>
-                        <div className="flex flex-col min-w-0">
+                        <div className="flex flex-col min-w-0 flex-1">
                             <span className={`font-semibold transition-colors truncate ${theme === 'dark' ? 'text-white group-hover:text-orange-500':
                             'text-gray-900 group-hover:text-orange-600'}`}>
                             {project.name}
                     </span>
-                    <span className={`text-xm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
+                    <span className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
                         Created {formatDate(project.createdAt)}
                     </span>
                     </div>
+                    <button
+                        onClick={(e) => handleDeleteProject(project._id, e)}
+                        className={`lg:hidden p-2 rounded-lg transition-all cursor-pointer ${
+                            theme === 'dark' ? 'hover:bg-red-500/10 hover:text-red-500 text-gray-400'
+                            : 'hover:bg-red-50 hover:text-red-600 text-gray-500'
+                        }`}
+                        title="Delete Project"
+                    >
+                        <Trash2 className="w-4 h-4"/>
+                    </button>
                     </div>
 
-                    <div className="col-span-3 flex items-center">
+                    <div className="lg:col-span-3 flex items-center mb-3 lg:mb-0">
                         <p className={`text-sm line-clamp-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
                         {project.description || 'No description'}
                         </p>
                     </div>
 
-                    <div className="col-span-2 flex items-center">
-                        <span className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                        {formatDate(project.lastModified)}
+                    <div className="flex flex-wrap items-center gap-4 lg:contents">
+                        <div className="lg:col-span-2 flex items-center gap-2">
+                            <Clock className="w-4 h-4 lg:hidden text-gray-500"/>
+                            <span className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                            {formatDate(project.lastModified)}
+                            </span>
+                        </div>
+
+                        <div className="lg:col-span-1 flex items-center gap-2">
+                            <FileCode className="w-4 h-4 lg:hidden text-gray-500"/>
+                            <span className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                                {project.fileCount || 0} files
+                            </span>
+                        </div>
+
+                        <div className="lg:col-span-1 flex items-center">
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 border rounded-lg text-xs font-semibold ${theme == 'dark' ?
+                            'bg-orange-500/10 border-orange-500/20 text-orange-500' :
+                             'bg-orange-50 border-orange-200 text-orange-600'}`}>
+                            <Code2 className="w-3 h-3"/>
+                            {project.template || 'React'}
                         </span>
+                        </div>
                     </div>
 
-                    <div className="col-span-1 flex items-center">
-                        <span className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                            {project.fileCount || 0}
-                        </span>
-                    </div>
-
-                    <div className="col-span-1 flex items-center">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 border rounded-lg text-xs font-semibold ${theme == 'dark' ?
-                        'bg-orange-500/10 border-orange-500/20 text-orange-500' :
-                         'bg-orange-50 border-orange-200 text-orange-600'}`}>
-                        <Code2 className="w-3 h-3"/>
-                        {project.template || 'React'}
-                    </span>
-                    </div>
-
-                    <div className="col-span-1 flex items-center justify-center gap-1">
+                    <div className="hidden lg:col-span-1 lg:flex items-center justify-center gap-1">
                     <button
                         onClick={(e) => handleDeleteProject(project._id, e)}
                         className={`p-2 opacity-0 group-hover:opacity-100 rounded-lg transition-all cursor-pointer ${
                             theme === 'dark' ? 'hover:bg-red-500/10 hover:text-red-500'
                             : 'hover:bg-red-50 hover:text-red-600'
                         }`}
-                        title = "Delete Project"
+                        title="Delete Project"
                     >
                         <Trash2 className="w-4 h-4"/>
                     </button>
@@ -314,7 +329,7 @@ export const Dashboard = ({ onProjectOpen }) => {
                   >
                     <MoreVertical className="w-4 h-4" />
                   </button>
-                        
+
                     </div>
 
                     </div>
