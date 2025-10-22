@@ -16,7 +16,9 @@ import { fileAPI } from "../api/files";
 import { parseFilePath, getLanguageFromExtension } from "../utils/fileHelpers";
 
 export const EditorLayout = ({ selectedProject }) => {
-    const [isPanelOpen, setIsPanelOpen] = useState(true);
+    // Check if mobile/tablet (below md breakpoint - 768px)
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+    const [isPanelOpen, setIsPanelOpen] = useState(!isMobile); // Hide file explorer on mobile by default
     const [isModalDialogOpen, setIsModalDialogOpen] = useState(false);
     const { sandpack } = useSandpack();
     const { code, updateCode } = useActiveCode();
@@ -30,8 +32,22 @@ export const EditorLayout = ({ selectedProject }) => {
 
     const saveTimeoutRef = useRef(null);
     const fileCacheRef = useRef(new Map());
-    const lastSavedContentRef = useRef({}); 
+    const lastSavedContentRef = useRef({});
 
+    // Handle responsive behavior
+    useEffect(() => {
+        const handleResize = () => {
+            const mobile = window.innerWidth < 768;
+            setIsMobile(mobile);
+            // Auto-close file explorer on mobile if it was open
+            if (mobile && isPanelOpen) {
+                setIsPanelOpen(false);
+            }
+        };
+
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, [isPanelOpen]);
 
     const loadFileCache = useCallback(async () => {
         if (!selectedProject) return;
@@ -265,15 +281,20 @@ export const EditorLayout = ({ selectedProject }) => {
                 />
             )}
 
+            {/* File Explorer - responsive width and positioning */}
             {isPanelOpen && (
-                <div className="flex-col h-full w-[15%]">
-                    <div className={`w-full h-[5%] flex items-center justify-between pl-4 pr-1 ${
+                <div className={`flex-col h-full ${
+                    isMobile
+                        ? 'absolute left-0 top-0 z-50 w-[80%] max-w-[280px] shadow-xl'
+                        : 'relative w-[280px] md:w-[15%] min-w-[200px]'
+                }`}>
+                    <div className={`w-full h-[5%] min-h-[40px] flex items-center justify-between pl-3 pr-1 ${
                         theme === 'dark' ? 'bg-zinc-900 border-b border-zinc-800' : 'bg-gray-100 border-b border-gray-300'
                     }`}>
-                        <span className={`text-xs text-semibold ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                        <span className={`text-xs font-semibold ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
                             EXPLORER
                         </span>
-                        <div>
+                        <div className="flex items-center gap-1">
                             <button
                                 className={`p-1 rounded cursor-pointer ${
                                     theme === 'dark' ? 'hover:bg-zinc-800 text-white' : 'hover:bg-gray-200 text-gray-700'
@@ -288,13 +309,14 @@ export const EditorLayout = ({ selectedProject }) => {
                                     theme === 'dark' ? 'hover:bg-zinc-800 text-white' : 'hover:bg-gray-200 text-gray-700'
                                 }`}
                                 onClick={() => setIsModalDialogOpen(true)}
+                                title="New File"
                             >
                                 <Plus className="w-4 h-4" />
                             </button>
                         </div>
                     </div>
 
-                    <div className={`h-[95%] ${theme === 'dark' ? 'bg-zinc-950' : 'bg-gray-50'}`}>
+                    <div className={`h-[95%] overflow-y-auto ${theme === 'dark' ? 'bg-zinc-950' : 'bg-gray-50'}`}>
                         <FileTree
                             selectedProject={selectedProject}
                             fileCache={fileCacheRef.current}
@@ -306,20 +328,28 @@ export const EditorLayout = ({ selectedProject }) => {
                 </div>
             )}
 
-            <div className={`${isPanelOpen ? 'w-[85%]' : 'w-full'} h-full ${theme === 'dark' ? 'bg-black' : 'bg-white'}`}>
-                <SandpackLayout style={{ height: '100%', display: 'flex', flexDirection: 'row' }}>
-                    <PanelGroup direction="horizontal" style={{ width: '100%', height: '100%' }}>
-                        <Panel defaultSize={50} minSize={20}>
+            {/* Backdrop for mobile file explorer */}
+            {isPanelOpen && isMobile && (
+                <div
+                    className="fixed inset-0 bg-black/50 z-40"
+                    onClick={() => setIsPanelOpen(false)}
+                />
+            )}
+
+            <div className={`${isPanelOpen && !isMobile ? 'w-[calc(100%-280px)] md:w-[85%]' : 'w-full'} h-full ${theme === 'dark' ? 'bg-black' : 'bg-white'}`}>
+                <SandpackLayout style={{ height: '100%', display: 'flex', flexDirection: isMobile ? 'column' : 'row' }}>
+                    <PanelGroup direction={isMobile ? "vertical" : "horizontal"} style={{ width: '100%', height: '100%' }}>
+                        <Panel defaultSize={isMobile ? 60 : 50} minSize={isMobile ? 30 : 20}>
                             <div className="flex flex-col h-full">
                                 <FileTabs closableTabs={true} />
 
-                                <div className={`w-full h-[5%] flex items-center justify-between pr-4 pl-4 gap-2 ${
+                                <div className={`w-full min-h-[40px] flex items-center justify-between px-2 sm:px-4 gap-1 sm:gap-2 ${
                                     theme === 'dark' ? 'bg-zinc-900 border-b border-zinc-800' : 'bg-gray-100 border-b border-gray-300'
                                 }`}>
-                                    <div className="flex items-center gap-2 flex-wrap">
+                                    <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
                                         {!isPanelOpen && (
                                             <button
-                                                className={`p-1 rounded cursor-pointer ${
+                                                className={`p-1 sm:p-1.5 rounded cursor-pointer ${
                                                     theme === 'dark' ? 'bg-zinc-800 hover:bg-zinc-700 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
                                                 }`}
                                                 onClick={() => setIsPanelOpen(true)}
@@ -332,7 +362,7 @@ export const EditorLayout = ({ selectedProject }) => {
                                         <button
                                             onClick={() => handleSave()}
                                             disabled={saving}
-                                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded cursor-pointer text-xs font-medium transition-all ${
+                                            className={`flex items-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-3 sm:py-1.5 rounded cursor-pointer text-xs font-medium transition-all ${
                                                 saveError
                                                     ? 'bg-red-500/20 text-red-500 border border-red-500/30'
                                                     : justSaved
@@ -347,52 +377,53 @@ export const EditorLayout = ({ selectedProject }) => {
                                         >
                                             {saveError ? (
                                                 <>
-                                                    <AlertCircle className="w-3.5 h-3.5" />
-                                                    Error
+                                                    <AlertCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                                                    <span className="hidden sm:inline">Error</span>
                                                 </>
                                             ) : justSaved ? (
                                                 <>
-                                                    <Check className="w-3.5 h-3.5" />
-                                                    Saved
+                                                    <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                                                    <span className="hidden sm:inline">Saved</span>
                                                 </>
                                             ) : saving ? (
                                                 <>
-                                                    <div className="w-3.5 h-3.5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
-                                                    Saving...
+                                                    <div className="w-3 h-3 sm:w-3.5 sm:h-3.5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+                                                    <span className="hidden sm:inline">Saving...</span>
                                                 </>
                                             ) : (
                                                 <>
-                                                    <Save className="w-3.5 h-3.5" />
-                                                    Save
+                                                    <Save className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                                                    <span className="hidden sm:inline">Save</span>
                                                 </>
                                             )}
                                         </button>
 
-                                        <label className="flex items-center gap-2 cursor-pointer">
+                                        <label className="flex items-center gap-1 sm:gap-2 cursor-pointer">
                                             <input
                                                 type="checkbox"
                                                 checked={autoSaveEnabled}
                                                 onChange={(e) => setAutoSaveEnabled(e.target.checked)}
-                                                className="w-3.5 h-3.5 rounded accent-orange-500"
+                                                className="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded accent-orange-500"
                                             />
                                             <span className={`text-xs font-medium ${
                                                 theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
                                             }`}>
-                                                Auto-save {autoSaveEnabled && '(2s)'}
+                                                <span className="hidden sm:inline">Auto-save {autoSaveEnabled && '(2s)'}</span>
+                                                <span className="sm:hidden">Auto</span>
                                             </span>
                                         </label>
 
                                         {autoSaving && (
-                                            <span className="text-xs text-orange-500 flex items-center gap-1.5">
-                                                <div className="w-3 h-3 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
-                                                Auto-saving...
+                                            <span className="text-xs text-orange-500 flex items-center gap-1 sm:gap-1.5">
+                                                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+                                                <span className="hidden sm:inline">Auto-saving...</span>
                                             </span>
                                         )}
 
                                         {saveError && (
                                             <span className="text-xs text-red-500 flex items-center gap-1">
                                                 <AlertCircle className="w-3 h-3" />
-                                                {saveError}
+                                                <span className="hidden sm:inline">{saveError}</span>
                                             </span>
                                         )}
                                     </div>
@@ -410,11 +441,13 @@ export const EditorLayout = ({ selectedProject }) => {
                             </div>
                         </Panel>
 
-                        <PanelResizeHandle className={`w-1 transition cursor-col-resize ${
-                            theme === 'dark' ? 'bg-zinc-700 hover:bg-orange-500' : 'bg-gray-300 hover:bg-orange-500'
+                        <PanelResizeHandle className={`${
+                            isMobile ? 'h-2 cursor-row-resize' : 'w-1 cursor-col-resize'
+                        } transition ${
+                            theme === 'dark' ? 'bg-zinc-700 hover:bg-orange-500 active:bg-orange-500' : 'bg-gray-300 hover:bg-orange-500 active:bg-orange-500'
                         }`} />
 
-                        <Panel defaultSize={50} minSize={20}>
+                        <Panel defaultSize={isMobile ? 40 : 50} minSize={isMobile ? 20 : 20}>
                             <SandpackPreview showNavigator={true} style={{ height: '100%' }} />
                         </Panel>
                     </PanelGroup>

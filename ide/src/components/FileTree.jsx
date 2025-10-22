@@ -58,41 +58,41 @@ const TreeNode = ({ node, activeFile, onFileClick, onDelete, level = 0, theme })
                 onClick={handleClick}
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
-                className={`flex items-center justify-between gap-2 px-3 py-1.5 cursor-pointer transition group ${
-                    theme === 'dark' ? 'hover:bg-zinc-800' : 'hover:bg-gray-200'
+                className={`flex items-center justify-between gap-2 px-2 sm:px-3 py-2 sm:py-1.5 cursor-pointer transition group touch-manipulation ${
+                    theme === 'dark' ? 'hover:bg-zinc-800 active:bg-zinc-800' : 'hover:bg-gray-200 active:bg-gray-200'
                 } ${
                     isActive ? `${theme === 'dark' ? 'bg-zinc-800' : 'bg-gray-200'} border-l-2 border-orange-500` : ''
                 }`}
-                style={{ paddingLeft: `${level * 12 + 12}px` }}
+                style={{ paddingLeft: `${level * 12 + 8}px` }}
             >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
                     {node.isFile ? (
                         <>
                             <div className="w-4" />
-                            <File className={`w-4 h-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`} />
+                            <File className={`w-4 h-4 flex-shrink-0 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`} />
                         </>
                     ) : (
                         <>
                             {isOpen ? (
-                                <ChevronDown className={`w-4 h-4 ${theme === 'dark' ? 'text-white' : 'text-gray-700'}`} />
+                                <ChevronDown className={`w-4 h-4 flex-shrink-0 ${theme === 'dark' ? 'text-white' : 'text-gray-700'}`} />
                             ) : (
-                                <ChevronRight className={`w-4 h-4 ${theme === 'dark' ? 'text-white' : 'text-gray-700'}`} />
+                                <ChevronRight className={`w-4 h-4 flex-shrink-0 ${theme === 'dark' ? 'text-white' : 'text-gray-700'}`} />
                             )}
-                            {isOpen ? <FolderOpen className="w-4 h-4 text-orange-500" /> : <Folder className="w-4 h-4 text-orange-500" />}
+                            {isOpen ? <FolderOpen className="w-4 h-4 flex-shrink-0 text-orange-500" /> : <Folder className="w-4 h-4 flex-shrink-0 text-orange-500" />}
                         </>
                     )}
-                    <span className={`text-sm ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{node.name}</span>
+                    <span className={`text-sm truncate ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{node.name}</span>
                 </div>
 
                 {isHovered && (
                     <button
                         onClick={handleDelete}
-                        className={`p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity ${
+                        className={`p-1.5 sm:p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ${
                             theme === 'dark' ? 'hover:bg-red-500/10 text-red-500' : 'hover:bg-red-50 text-red-600'
                         }`}
                         title="Delete"
                     >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                     </button>
                 )}
             </div>
